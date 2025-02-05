@@ -27,6 +27,7 @@ const userSchema = new mongoose.Schema({
         type: String
     },
 })
+<<<<<<< HEAD
 
 userSchema.methods.generateAuthToken = function(){
     const token = jwt.sign({_id: this._id}, process.env.JWT_SECRET)
@@ -46,3 +47,5 @@ const userModel = mongoose.model('user',userSchema);
 
 module.exports = userModel;
 
+=======
+>>>>>>> 5a2a773e9808cc3ef9acf1f7342af3a3ad58cd86
