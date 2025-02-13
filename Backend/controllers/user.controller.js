@@ -23,3 +23,32 @@ module.exports.RegisterUser = async (req, res, next) => {
 
     res.status(201).json({token, user});
 }
+
+module.exports.LoginUser = async (req, res, next) => {
+    const error = validationResult(req);
+    if(!error.isEmpty()){
+        return res.status(400).json( {error: error.array() } )
+    }
+
+    const {email, password} = req.body;
+
+    const match = await userModel.findOne({email}).select("+password");
+
+    if(!match){
+        return res.status(400).json({ error: "Invalid email or password" });
+    }
+
+    const passwordCorrect = await match.comparePassword(password);
+
+    if(!passwordCorrect){
+        return res.status(400).json({ error: "Invalid email or password" });
+    }
+
+    const token = match.generateAuthToken();
+
+    res.status(201).json({token, match});
+}
+
+module.exports.GetProfile = async(req, res, next) => {
+    
+}
