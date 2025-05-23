@@ -21,6 +21,7 @@ const userSchema = new mongoose.Schema({
     password: {
         type: String,
         required: true,
+        select: false,
         minlength: [2, 'Password must be atleast 2 characters long']
     },
     socketId: {
