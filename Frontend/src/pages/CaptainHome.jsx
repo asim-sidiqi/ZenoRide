@@ -41,9 +41,18 @@ const CaptainHome = () => {
             userId: captain._id,
             userType: 'captain'
         })
+
         const updateLocation = () => {
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(position => {
+
+                    console.log({
+                         userId: captain._id,
+                        location: {
+                            ltd: position.coords.latitude,
+                            lng: position.coords.longitude
+                        }
+                    })
 
                     socket.emit('update-location-captain', {
                         userId: captain._id,
