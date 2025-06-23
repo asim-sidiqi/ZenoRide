@@ -73,7 +73,7 @@ module.exports.LogoutCaptain = async (req, res, next) => {
         return res.status(401).json({ message: 'Unauthorized' });
     }
 
-    //await captainService.blackListToken(token);
+    await captainService.blackListToken(token);
 
     res.clearCookie('token');
 

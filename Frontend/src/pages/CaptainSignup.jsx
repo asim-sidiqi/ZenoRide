@@ -45,6 +45,9 @@ const CaptainSignup = () => {
       const data = response.data
       setCaptain(data.captain)
       localStorage.setItem('token', data.token)
+
+      localStorage.setItem('captain', JSON.stringify(data.captain));
+      
       navigate('/captain-home')
     }
 
@@ -58,7 +61,6 @@ const CaptainSignup = () => {
     setVehicleType('')
 
   }
-
   return (
     <div className='py-5 px-5 h-screen flex flex-col justify-between'>
       <div>

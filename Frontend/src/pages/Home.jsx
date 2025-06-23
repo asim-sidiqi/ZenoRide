@@ -8,7 +8,7 @@ import VehiclePanel from '../components/VehiclePanel';
 import ConfirmRide from '../components/ConfirmRide';
 import LookingForDriver from '../components/LookingForDriver';
 import WaitingForDriver from '../components/WaitingForDriver';
-//import { SocketContext } from '../context/SocketContext';
+import { SocketContext } from '../context/SocketContext';
 import { useContext } from 'react';
 import { UserDataContext } from '../context/UserContext';
 import { useNavigate } from 'react-router-dom';
@@ -37,26 +37,26 @@ const Home = () => {
 
     const navigate = useNavigate()
 
-    //const { socket } = useContext(SocketContext)
+    const { socket } = useContext(SocketContext)
     const { user } = useContext(UserDataContext)
 
-    // useEffect(() => {
-    //     socket.emit("join", { userType: "user", userId: user._id })
-    // }, [ user ])
+    useEffect(() => {
+        socket.emit("join", { userType: "user", userId: user._id })
+    }, [ user ])
 
-    // socket.on('ride-confirmed', ride => {
+    socket.on('ride-confirmed', ride => {
 
 
-    //     setVehicleFound(false)
-    //     setWaitingForDriver(true)
-    //     setRide(ride)
-    // })
+        setVehicleFound(false)
+        setWaitingForDriver(true)
+        setRide(ride)
+    })
 
-    // socket.on('ride-started', ride => {
-    //     console.log("ride")
-    //     setWaitingForDriver(false)
-    //     navigate('/riding', { state: { ride } }) // Updated navigate to include ride data
-    // })
+    socket.on('ride-started', ride => {
+        console.log("ride")
+        setWaitingForDriver(false)
+        navigate('/riding', { state: { ride } }) // Updated navigate to include ride data
+    })
 
 
     const handlePickupChange = async (e) => {
@@ -179,8 +179,6 @@ const Home = () => {
 
 
         setFare(response.data)
-
-
     }
 
     async function createRide() {
@@ -255,30 +253,37 @@ const Home = () => {
                     />
                 </div>
             </div>
-            <div ref={vehiclePanelRef} className='fixed w-full z-10 bottom-0 translate-y-full bg-white px-3 py-10 pt-12'>
+            <div ref={vehiclePanelRef} className='fixed w-full z-10 bottom-10 translate-y-full bg-white px-3 py-10 pt-12'>
                 <VehiclePanel
                     selectVehicle={setVehicleType}
                     fare={fare} setConfirmRidePanel={setConfirmRidePanel} setVehiclePanel={setVehiclePanel} />
             </div>
-            <div ref={confirmRidePanelRef} className='fixed w-full z-10 bottom-0 translate-y-full bg-white px-3 py-6 pt-12'>
+            
+            {confirmRidePanel && (
+            <div ref={confirmRidePanelRef} className='fixed w-full z-30 bottom-0 bg-white px-3 py-6 pt-12 max-h-[80vh] overflow-y-auto' style={{ transform: 'translateY(0)' }}>
                 <ConfirmRide
                     createRide={createRide}
                     pickup={pickup}
                     destination={destination}
                     fare={fare}
                     vehicleType={vehicleType}
-
-                    setConfirmRidePanel={setConfirmRidePanel} setVehicleFound={setVehicleFound} />
+                    setConfirmRidePanel={setConfirmRidePanel}
+                    setVehicleFound={setVehicleFound}/>
             </div>
-            <div ref={vehicleFoundRef} className='fixed w-full z-10 bottom-0 translate-y-full bg-white px-3 py-6 pt-12'>
+            )
+            }
+            {vehicleFound && (
+            <div ref={vehicleFoundRef} className='fixed w-full z-40 bottom-0 bg-white px-3 py-6 pt-12 max-h-[80vh] overflow-y-auto' style={{ transform: 'translateY(0)' }}>
                 <LookingForDriver
                     createRide={createRide}
                     pickup={pickup}
                     destination={destination}
                     fare={fare}
                     vehicleType={vehicleType}
-                    setVehicleFound={setVehicleFound} />
-            </div>
+                    setVehicleFound={setVehicleFound}/>
+             </div>
+            )}
+
             <div ref={waitingForDriverRef} className='fixed w-full  z-10 bottom-0  bg-white px-3 py-6 pt-12'>
                 <WaitingForDriver
                     ride={ride}
