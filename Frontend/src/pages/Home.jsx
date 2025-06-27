@@ -12,7 +12,7 @@ import { SocketContext } from '../context/SocketContext';
 import { useContext } from 'react';
 import { UserDataContext } from '../context/UserContext';
 import { useNavigate } from 'react-router-dom';
-//import LiveTracking from '../components/LiveTracking';
+import LiveTracking from '../components/LiveTracking';
 
 const Home = () => {
     const [ pickup, setPickup ] = useState('')
@@ -71,7 +71,7 @@ const Home = () => {
             })
             setPickupSuggestions(response.data)
         } catch {
-            // handle error
+            console.error("Error fetching pickup suggestions:", e);
         }
     }
 
@@ -130,28 +130,34 @@ const Home = () => {
     }, [ vehiclePanel ])
 
     useGSAP(function () {
-        if (confirmRidePanel) {
-            gsap.to(confirmRidePanelRef.current, {
-                transform: 'translateY(0)'
-            })
-        } else {
-            gsap.to(confirmRidePanelRef.current, {
-                transform: 'translateY(100%)'
-            })
+        if (confirmRidePanelRef.current) {
+            if (confirmRidePanel) {
+                gsap.to(confirmRidePanelRef.current, {
+                    transform: 'translateY(0)'
+                })
+            } else {
+                gsap.to(confirmRidePanelRef.current, {
+                    transform: 'translateY(100%)'
+                })
+            }
         }
     }, [ confirmRidePanel ])
 
     useGSAP(function () {
-        if (vehicleFound) {
-            gsap.to(vehicleFoundRef.current, {
-                transform: 'translateY(0)'
-            })
-        } else {
-            gsap.to(vehicleFoundRef.current, {
-                transform: 'translateY(100%)'
-            })
+        if (vehicleFoundRef.current) {
+            if (vehicleFound) {
+                gsap.to(vehicleFoundRef.current, {
+                    transform: 'translateY(0)'
+                })
+            } else {
+                gsap.to(vehicleFoundRef.current, {
+                    transform: 'translateY(100%)'
+                })
+            }
         }
     }, [ vehicleFound ])
+
+
 
     useGSAP(function () {
         if (waitingForDriver) {
@@ -175,24 +181,31 @@ const Home = () => {
             headers: {
                 Authorization: `Bearer ${localStorage.getItem('token')}`
             }
-        })
+        });
 
 
         setFare(response.data)
     }
 
     async function createRide() {
+        const token = localStorage.getItem('token');
+
+        if (!token) {
+            console.error('No auth token found! pakda gaya');
+            return;
+        }
+
         const response = await axios.post(`${import.meta.env.VITE_BASE_URL}/rides/create`, {
             pickup,
             destination,
             vehicleType
         }, {
             headers: {
-                Authorization: `Bearer ${localStorage.getItem('token')}`
+                Authorization: `Bearer ${token}`
             }
-        })
+        });
 
-
+        console.log(response.data);
     }
 
     return (
@@ -200,8 +213,8 @@ const Home = () => {
             <img className='w-16 absolute left-5 top-5' src="https://upload.wikimedia.org/wikipedia/commons/c/cc/Uber_logo_2018.png" alt="" />
             <div className='h-screen w-screen'>
                 {/* image for temporary use  */}
-                <img className='h-full w-full object-cover' src="https://miro.medium.com/v2/resize:fit:1400/0*gwMx05pqII5hbfmX.gif" alt="" />
-                {/* <LiveTracking /> */}
+                {/* <img className='h-full w-full object-cover' src="https://miro.medium.com/v2/resize:fit:1400/0*gwMx05pqII5hbfmX.gif" alt="" /> */}
+                <LiveTracking />
             </div>
             <div className=' flex flex-col justify-end h-screen absolute top-0 w-full'>
                 <div className='h-[30%] p-6 bg-white relative'>
