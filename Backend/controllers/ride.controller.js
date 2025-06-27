@@ -3,10 +3,9 @@ const { validationResult } = require('express-validator');
 const mapService = require('../services/maps.service');
 const { sendMessageToSocketId } = require('../socket');
 const rideModel = require('../models/ride.model');
-
+const captainModel = require('../models/captain.model');
 
 module.exports.createRide = async (req, res) => {
-    // ✅ Step 1: Validate input fields
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
@@ -15,39 +14,56 @@ module.exports.createRide = async (req, res) => {
     const { pickup, destination, vehicleType } = req.body;
 
     try {
-        // ✅ Step 2: Create the ride
+        // ✅ Step 1: Create the ride
         const ride = await rideService.createRide({
-            user: req.user._id,          // ✅ User ID from JWT middleware
+            user: req.user._id,
             pickup,
             destination,
             vehicleType
         });
 
-        // ✅ Step 3: Get pickup coordinates (for captain search radius)
+        // ✅ Step 2: Get pickup coordinates for geospatial search
         const pickupCoordinates = await mapService.getAddressCoordinate(pickup);
 
-        // ✅ Step 4: Find captains within 2 km radius
-        const captainsInRadius = await mapService.getCaptainsInTheRadius(
-            pickupCoordinates.lat,
-            pickupCoordinates.lng,
-            2
-        );
+        if (!pickupCoordinates) {
+            return res.status(400).json({ message: "Invalid pickup address" });
+        }
 
-        // ✅ Step 5: Hide OTP before sending to captains
-        ride.otp = "";
+        const { lat, lng } = pickupCoordinates;
 
-        // ✅ Step 6: Populate ride with user info (for sending to captains)
-        const rideWithUser = await rideModel.findOne({ _id: ride._id }).populate('user');
-
-        // ✅ Step 7: Notify all captains via socket
-        captainsInRadius.forEach(captain => {
-            sendMessageToSocketId(captain.socketId, {
-                event: 'new-ride',
-                data: rideWithUser
-            });
+        // ✅ Step 3: Find nearby captains (within 2 km)
+        const nearbyCaptains = await captainModel.find({
+            location: {
+                $near: {
+                    $geometry: {
+                        type: "Point",
+                        coordinates: [lng, lat]
+                    },
+                    $maxDistance: 2000 // 2 km
+                }
+            }
         });
 
-        // ✅ Step 8: Send response back to user (frontend)
+        console.log('Nearby captains found:', nearbyCaptains.length);
+
+        // ✅ Step 4: Hide OTP before sending to captains
+        ride.otp = "";
+
+        // ✅ Step 5: Populate user details in ride before sending
+        const rideWithUser = await rideModel.findOne({ _id: ride._id }).populate('user');
+
+        // ✅ Step 6: Emit "new-ride" event to all nearby captains
+        nearbyCaptains.forEach(captain => {
+            if (captain.socketId) {
+                sendMessageToSocketId(captain.socketId, {
+                    event: 'new-ride',
+                    data: rideWithUser
+                });
+                console.log(`Sent new ride to captain ${captain._id} socket ${captain.socketId}`);
+            }
+        });
+
+        // ✅ Step 7: Send ride response to user
         return res.status(201).json(ride);
 
     } catch (err) {
@@ -57,7 +73,6 @@ module.exports.createRide = async (req, res) => {
 };
 
 module.exports.getFare = async (req, res) => {
-    // ✅ Step 1: Validate request
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
@@ -66,12 +81,8 @@ module.exports.getFare = async (req, res) => {
     const { pickup, destination } = req.query;
 
     try {
-        // ✅ Step 2: Call service to calculate fare
         const fare = await rideService.getFare(pickup, destination);
-
-        // ✅ Step 3: Return fare in response
         return res.status(200).json(fare);
-
     } catch (err) {
         console.error('Fare calculation failed:', err);
         return res.status(500).json({ message: err.message });
@@ -92,15 +103,14 @@ module.exports.confirmRide = async (req, res) => {
         sendMessageToSocketId(ride.user.socketId, {
             event: 'ride-confirmed',
             data: ride
-        })
+        });
 
         return res.status(200).json(ride);
     } catch (err) {
-
-        console.log(err);
+        console.error('Ride confirmation failed:', err);
         return res.status(500).json({ message: err.message });
     }
-}
+};
 
 module.exports.startRide = async (req, res) => {
     const errors = validationResult(req);
@@ -113,18 +123,17 @@ module.exports.startRide = async (req, res) => {
     try {
         const ride = await rideService.startRide({ rideId, otp, captain: req.captain });
 
-        console.log(ride);
-
         sendMessageToSocketId(ride.user.socketId, {
             event: 'ride-started',
             data: ride
-        })
+        });
 
         return res.status(200).json(ride);
     } catch (err) {
+        console.error('Ride start failed:', err);
         return res.status(500).json({ message: err.message });
     }
-}
+};
 
 module.exports.endRide = async (req, res) => {
     const errors = validationResult(req);
@@ -140,12 +149,11 @@ module.exports.endRide = async (req, res) => {
         sendMessageToSocketId(ride.user.socketId, {
             event: 'ride-ended',
             data: ride
-        })
-
-
+        });
 
         return res.status(200).json(ride);
     } catch (err) {
+        console.error('Ride end failed:', err);
         return res.status(500).json({ message: err.message });
-    } s
-}
+    }
+};
