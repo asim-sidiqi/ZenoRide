@@ -119,6 +119,7 @@ module.exports.startRide = async (req, res) => {
     }
 
     const { rideId, otp } = req.query;
+    console.log(otp);
 
     try {
         const ride = await rideService.startRide({ rideId, otp, captain: req.captain });

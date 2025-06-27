@@ -102,7 +102,7 @@ module.exports.confirmRide = async ({
 
 }
 
-module.exports.startRide = async ({ rideId, otp, captain }) => {
+module.exports.startRide = async ({ rideId, otp }) => {
     if (!rideId || !otp) {
         throw new Error('Ride id and OTP are required');
     }
