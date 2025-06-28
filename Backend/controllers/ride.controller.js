@@ -39,7 +39,7 @@ module.exports.createRide = async (req, res) => {
                         type: "Point",
                         coordinates: [lng, lat]
                     },
-                    $maxDistance: 2000 // 2 km
+                    $maxDistance: 4000 // 4 km
                 }
             }
         });
@@ -47,7 +47,7 @@ module.exports.createRide = async (req, res) => {
         console.log('Nearby captains found:', nearbyCaptains.length);
 
         // ✅ Step 4: Hide OTP before sending to captains
-        ride.otp = "";
+        //ride.otp = "";
 
         // ✅ Step 5: Populate user details in ride before sending
         const rideWithUser = await rideModel.findOne({ _id: ride._id }).populate('user');
