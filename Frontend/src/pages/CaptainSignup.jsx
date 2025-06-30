@@ -128,7 +128,8 @@ const CaptainSignup = () => {
               placeholder='Vehicle Color'
               value={vehicleColor}
               onChange={(e) => {
-                setVehicleColor(e.target.value)
+                const newValue = e.target.value.replace(/[0-9]/g, '');  // Remove any digits
+                setVehicleColor(newValue);
               }}
             />
             <input
@@ -138,7 +139,7 @@ const CaptainSignup = () => {
               placeholder='Vehicle Plate'
               value={vehiclePlate}
               onChange={(e) => {
-                const newValue = e.target.value.replace(/\s/g, '').toUpperCase();  // Remove spaces & convert to uppercase
+                const newValue = e.target.value.replace(/\s/g, '').toUpperCase().slice(0, 10);  // Remove spaces & convert to uppercase
                 setVehiclePlate(newValue);
               }}
               onKeyDown={(e) => {
