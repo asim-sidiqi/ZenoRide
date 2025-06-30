@@ -2,6 +2,7 @@ const rideModel = require('../models/ride.model');
 const mapService = require('./maps.service');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
+const captainModel = require('../models/captain.model');
 
 async function getFare(pickup, destination) {
     if (!pickup || !destination) {
@@ -23,9 +24,9 @@ async function getFare(pickup, destination) {
     }
 
     // ✅ Fare calculation rules
-    const baseFare = { auto: 30, car: 50, moto: 20 };
-    const perKmRate = { auto: 10, car: 15, moto: 8 };
-    const perMinuteRate = { auto: 2, car: 3, moto: 1.5 };
+    const baseFare = { auto: 30, car: 50, motorcycle: 20 };
+    const perKmRate = { auto: 10, car: 15, motorcycle: 8 };
+    const perMinuteRate = { auto: 2, car: 3, motorcycle: 1.5 };
 
     const distanceInKm = distanceTime.distance.value / 1000;
     const durationInMin = distanceTime.duration.value / 60;
@@ -33,7 +34,7 @@ async function getFare(pickup, destination) {
     const fare = {
         auto: Math.round(baseFare.auto + (distanceInKm * perKmRate.auto) + (durationInMin * perMinuteRate.auto)),
         car: Math.round(baseFare.car + (distanceInKm * perKmRate.car) + (durationInMin * perMinuteRate.car)),
-        moto: Math.round(baseFare.moto + (distanceInKm * perKmRate.moto) + (durationInMin * perMinuteRate.moto))
+        motorcycle: Math.round(baseFare.motorcycle + (distanceInKm * perKmRate.motorcycle) + (durationInMin * perMinuteRate.motorcycle))
     };
 
     return fare;
@@ -75,6 +76,41 @@ module.exports.createRide = async ({ user, pickup, destination, vehicleType }) =
 
     return ride;
 };
+
+module.exports.createOnSightRide = async ({ user, pickup, destination, vehicleType, plateNumber }) => {
+    if (!user || !pickup || !destination || !vehicleType || !plateNumber) {
+        throw new Error('All fields are required for On-Sight booking');
+    }
+
+    // ✅ Find captain by plate number
+    const captain = await captainModel.findOne({ "vehicle.plate": plateNumber });
+
+    if (!captain) {
+        throw new Error('No captain found with this plate number');
+    }
+
+    // ✅ Calculate fare for the selected vehicle type
+    const fareDetails = await getFare(pickup, destination);
+
+    if (!fareDetails[vehicleType]) {
+        throw new Error('Invalid vehicle type selected');
+    }
+
+    // ✅ Create ride with captain assigned directly
+    const ride = await rideModel.create({
+        user,
+        pickup,
+        destination,
+        vehicleType,
+        captain: captain._id,
+        otp: getOtp(6),
+        fare: fareDetails[vehicleType],
+        status: 'pending'
+    });
+
+    return ride;
+};
+
 
 module.exports.confirmRide = async ({
     rideId, captain
@@ -120,6 +156,7 @@ module.exports.startRide = async ({ rideId, otp }) => {
     }
 
     if (ride.otp !== otp) {
+        console.log("gotcha");
         throw new Error('Invalid OTP');
     }
 

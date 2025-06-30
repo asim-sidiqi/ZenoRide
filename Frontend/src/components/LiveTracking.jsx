@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { LoadScript, GoogleMap, Marker } from '@react-google-maps/api'
+import { useRef } from 'react';
 
 const containerStyle = {
     width: '100%',
@@ -13,6 +14,7 @@ const center = {
 
 const LiveTracking = () => {
     const [ currentPosition, setCurrentPosition ] = useState(center);
+    const mapRef = useRef(null);
 
     useEffect(() => {
         navigator.geolocation.getCurrentPosition((position) => {
@@ -53,12 +55,28 @@ const LiveTracking = () => {
 
     }, []);
 
+    const handleMapLoad = (map) => {
+        mapRef.current = map;
+
+        map.setMapTypeId('roadmap');  // ✅ Set default map type without locking it with props
+
+        map.setOptions({
+        mapTypeControl: true,  // ✅ Show the toggle
+        mapTypeControlOptions: {
+            position: window.google.maps.ControlPosition.TOP_LEFT,
+            style: window.google.maps.MapTypeControlStyle.DEFAULT,
+        },
+        });
+    };
+
     return (
         <LoadScript googleMapsApiKey={import.meta.env.VITE_GOOGLE_MAPS_API}>
             <GoogleMap
                 mapContainerStyle={containerStyle}
                 center={currentPosition}
                 zoom={15}
+                onLoad={handleMapLoad}
+            
             >
                 <Marker position={currentPosition} />
             </GoogleMap>

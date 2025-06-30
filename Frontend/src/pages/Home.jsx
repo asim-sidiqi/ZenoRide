@@ -13,6 +13,8 @@ import { useContext } from 'react';
 import { UserDataContext } from '../context/UserContext';
 import { useNavigate } from 'react-router-dom';
 import LiveTracking from '../components/LiveTracking';
+import OnSight from '../components/OnSight';
+import logo from '../assets/logo.png'; 
 
 const Home = () => {
     const [ pickup, setPickup ] = useState('')
@@ -21,12 +23,14 @@ const Home = () => {
     const vehiclePanelRef = useRef(null)
     const confirmRidePanelRef = useRef(null)
     const vehicleFoundRef = useRef(null)
+    const onSightPanelRef = useRef(null);
     const waitingForDriverRef = useRef(null)
     const panelRef = useRef(null)
     const panelCloseRef = useRef(null)
     const [ vehiclePanel, setVehiclePanel ] = useState(false)
-    const [ confirmRidePanel, setConfirmRidePanel ] = useState(false)
+    const [ confirmRidePanel, setConfirmRidePanel ] = useState(false) //testing phase
     const [ vehicleFound, setVehicleFound ] = useState(false)
+    const [ onSightPanel, setOnSightPanel ] = useState(false) //testing phase
     const [ waitingForDriver, setWaitingForDriver ] = useState(false)
     const [ pickupSuggestions, setPickupSuggestions ] = useState([])
     const [ destinationSuggestions, setDestinationSuggestions ] = useState([])
@@ -34,6 +38,7 @@ const Home = () => {
     const [ fare, setFare ] = useState({})
     const [ vehicleType, setVehicleType ] = useState(null)
     const [ ride, setRide ] = useState(null)
+    const [plateNumber, setPlateNumber] = useState('');
 
     const navigate = useNavigate()
 
@@ -44,19 +49,32 @@ const Home = () => {
         socket.emit("join", { userType: "user", userId: user._id })
     }, [ user ])
 
-    socket.on('ride-confirmed', ride => {
+    useEffect(() => {
+        socket.on('ride-confirmed', ride => {
+            setVehicleFound(false);
+            setWaitingForDriver(true);
+            setRide(ride);
+        });
 
+        socket.on('ride-on-sight', ride => {
+            setVehicleFound(false);
+            setWaitingForDriver(true);
+            setRide(ride);
+        });
 
-        setVehicleFound(false)
-        setWaitingForDriver(true)
-        setRide(ride)
-    })
+        socket.on('ride-started', ride => {
+            console.log(ride);
+            setWaitingForDriver(false);
+            navigate('/riding', { state: { ride } });
+        });
 
-    socket.on('ride-started', ride => {
-        console.log("ride")
-        setWaitingForDriver(false)
-        navigate('/riding', { state: { ride } }) // Updated navigate to include ride data
-    })
+        return () => {
+            socket.off('ride-confirmed');
+            socket.off('ride-on-sight');
+            socket.off('ride-started');
+        };
+    }, [socket]);
+
 
 
     const handlePickupChange = async (e) => {
@@ -118,6 +136,8 @@ const Home = () => {
 
 
     useGSAP(function () {
+        if (!vehiclePanelRef.current) return;
+
         if (vehiclePanel) {
             gsap.to(vehiclePanelRef.current, {
                 transform: 'translateY(0)'
@@ -156,6 +176,20 @@ const Home = () => {
             }
         }
     }, [ vehicleFound ])
+
+    useGSAP(function () {
+        if (onSightPanelRef.current) {
+            if (onSightPanel) {
+                gsap.to(onSightPanelRef.current, {
+                    transform: 'translateY(0)'
+                })
+            } else {
+                gsap.to(onSightPanelRef.current, {
+                    transform: 'translateY(100%)'
+                })
+            }
+        }
+    }, [ onSightPanel ])
 
 
 
@@ -208,12 +242,41 @@ const Home = () => {
         console.log(response.data);
     }
 
+    async function createOnSightRide(plateNumber) {
+        const token = localStorage.getItem('token');
+
+        if (!token) {
+            console.error('No auth token found!');
+            return;
+        }
+
+        // Debug: log the values being sent
+        console.log({ pickup, destination, vehicleType, plateNumber });
+
+        try {
+            const response = await axios.post(`${import.meta.env.VITE_BASE_URL}/rides/on-sight`, {
+                pickup,
+                destination,
+                vehicleType,
+                plateNumber
+            }, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+
+            console.log(response.data);
+        } catch (error) {
+            alert(error.response?.data?.message || "Failed to book ride. Please check your input.");
+            console.error(error);
+        }
+    } 
+
     return (
         <div className='h-screen relative overflow-hidden'>
-            <img className='w-16 absolute left-5 top-5' src="https://upload.wikimedia.org/wikipedia/commons/c/cc/Uber_logo_2018.png" alt="" />
+            
             <div className='h-screen w-screen'>
-                {/* image for temporary use  */}
-                {/* <img className='h-full w-full object-cover' src="https://miro.medium.com/v2/resize:fit:1400/0*gwMx05pqII5hbfmX.gif" alt="" /> */}
+                {/* <img className='w-16 absolute left-5 top-5 z-10 mt-10' src={logo} alt="" /> */}
                 <LiveTracking />
             </div>
             <div className=' flex flex-col justify-end h-screen absolute top-0 w-full'>
@@ -267,12 +330,15 @@ const Home = () => {
                     />
                 </div>
             </div>
+
+            {vehiclePanel && (
             <div ref={vehiclePanelRef} className='fixed w-full z-10 bottom-10 translate-y-full bg-white px-3 py-10 pt-12'>
                 <VehiclePanel
                     selectVehicle={setVehicleType}
                     fare={fare} setConfirmRidePanel={setConfirmRidePanel} setVehiclePanel={setVehiclePanel} />
             </div>
-            
+            )}
+
             {confirmRidePanel && (
             <div ref={confirmRidePanelRef} className='fixed w-full z-30 bottom-0 bg-white px-3 py-6 pt-12 max-h-[80vh] overflow-y-auto' style={{ transform: 'translateY(0)' }}>
                 <ConfirmRide
@@ -282,10 +348,12 @@ const Home = () => {
                     fare={fare}
                     vehicleType={vehicleType}
                     setConfirmRidePanel={setConfirmRidePanel}
+                    setOnSightPanel={setOnSightPanel}
                     setVehicleFound={setVehicleFound}/>
             </div>
             )
             }
+
             {vehicleFound && (
             <div ref={vehicleFoundRef} className='fixed w-full z-40 bottom-0 bg-white px-3 py-6 pt-12 max-h-[80vh] overflow-y-auto' style={{ transform: 'translateY(0)' }}>
                 <LookingForDriver
@@ -295,6 +363,22 @@ const Home = () => {
                     fare={fare}
                     vehicleType={vehicleType}
                     setVehicleFound={setVehicleFound}/>
+             </div>
+            )}
+
+            {onSightPanel && (
+            <div ref={onSightPanelRef} className='fixed w-full z-40 bottom-0 bg-white px-3 py-6 pt-12 max-h-[80vh] overflow-y-auto' style={{ transform: 'translateY(0)' }}>
+                <OnSight
+                    createOnSightRide={createOnSightRide}
+                    pickup={pickup}
+                    destination={destination}
+                    fare={fare}
+                    vehicleType={vehicleType}
+                    setVehicleFound={setVehicleFound}
+                    plateNumber={plateNumber}
+                    setPlateNumber={setPlateNumber}
+                    setOnSightPanel={setOnSightPanel}
+                    setVehiclePanel={setVehiclePanel}/>
              </div>
             )}
 

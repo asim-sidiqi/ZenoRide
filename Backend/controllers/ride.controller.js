@@ -41,13 +41,14 @@ module.exports.createRide = async (req, res) => {
                     },
                     $maxDistance: 4000 // 4 km
                 }
-            }
+            },
+            "vehicle.vehicleType": vehicleType
         });
 
         console.log('Nearby captains found:', nearbyCaptains.length);
 
         // ✅ Step 4: Hide OTP before sending to captains
-        //ride.otp = "";
+        ride.otp = "";
 
         // ✅ Step 5: Populate user details in ride before sending
         const rideWithUser = await rideModel.findOne({ _id: ride._id }).populate('user');
@@ -71,6 +72,50 @@ module.exports.createRide = async (req, res) => {
         return res.status(500).json({ message: err.message });
     }
 };
+
+module.exports.createOnSightRide = async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { pickup, destination, vehicleType, plateNumber } = req.body;
+
+    try {
+        // ✅ Step 1: Create the ride and assign captain using plate number
+        const ride = await rideService.createOnSightRide({
+            user: req.user._id,
+            pickup,
+            destination,
+            vehicleType,
+            plateNumber
+        });
+
+        
+        // ✅ Step 2: Get captain details to send socket notification
+        const captain = await captainModel.findOne({"vehicle.plate": plateNumber}).select('socketId _id');
+
+        if (captain && captain.socketId) {
+            // ✅ Step 3: Populate user details before sending
+            const rideWithUser = await rideModel.findOne({ _id: ride._id }).populate('user');
+
+            sendMessageToSocketId(captain.socketId, {
+                event: 'ride-on-sight',
+                data: rideWithUser
+            });
+
+            console.log(`On-sight ride sent to captain ${captain._id} (Plate: ${plateNumber})`);
+        }
+
+        // ✅ Step 4: Return ride to user
+        return res.status(201).json(ride);
+
+    } catch (err) {
+        console.error('On-Sight Ride creation failed:', err);
+        return res.status(500).json({ message: err.message });
+    }
+};
+
 
 module.exports.getFare = async (req, res) => {
     const errors = validationResult(req);
@@ -132,6 +177,16 @@ module.exports.startRide = async (req, res) => {
         return res.status(200).json(ride);
     } catch (err) {
         console.error('Ride start failed:', err);
+        
+        // ✅ Handle known errors gracefully
+        if (err.message === 'Invalid OTP') {
+            return res.status(400).json({ message: 'Invalid OTP' });
+        }
+
+        if (err.message === 'Ride not found' || err.message === 'Ride not accepted') {
+            return res.status(400).json({ message: err.message });
+        }
+        
         return res.status(500).json({ message: err.message });
     }
 };

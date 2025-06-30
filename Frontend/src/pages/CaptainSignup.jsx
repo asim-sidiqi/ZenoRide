@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { CaptainDataContext } from '../context/CaptainContext'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
+import logo from '../assets/logo.png'
 
 const CaptainSignup = () => {
 
@@ -64,7 +65,7 @@ const CaptainSignup = () => {
   return (
     <div className='py-5 px-5 h-screen flex flex-col justify-between'>
       <div>
-        <img className='w-20 mb-3' src="https://www.svgrepo.com/show/505031/uber-driver.svg" alt="" />
+        <img className='w-20 mb-3' src={logo} alt="" />
 
         <form onSubmit={(e) => {
           submitHandler(e)
@@ -137,7 +138,13 @@ const CaptainSignup = () => {
               placeholder='Vehicle Plate'
               value={vehiclePlate}
               onChange={(e) => {
-                setVehiclePlate(e.target.value)
+                const newValue = e.target.value.replace(/\s/g, '').toUpperCase();  // Remove spaces & convert to uppercase
+                setVehiclePlate(newValue);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === ' ') {
+                  e.preventDefault();  // Prevent spacebar
+                }
               }}
             />
           </div>
@@ -163,7 +170,7 @@ const CaptainSignup = () => {
               <option value="" disabled>Select Vehicle Type</option>
               <option value="car">Car</option>
               <option value="auto">Auto</option>
-              <option value="moto">Moto</option>
+              <option value="motorcycle">Moto</option>
             </select>
           </div>
 

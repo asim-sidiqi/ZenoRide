@@ -9,9 +9,18 @@ router.post('/create',
     authMiddleware.authUser,
     body('pickup').isString().isLength({ min: 3 }).withMessage('Invalid pickup address'),
     body('destination').isString().isLength({ min: 3 }).withMessage('Invalid destination address'),
-    body('vehicleType').isString().isIn([ 'auto', 'car', 'moto' ]).withMessage('Invalid vehicle type'),
+    body('vehicleType').isString().isIn([ 'auto', 'car', 'motorcycle' ]).withMessage('Invalid vehicle type'),
     rideController.createRide
 )
+
+router.post('/on-sight',
+    authMiddleware.authUser,
+    body('pickup').isString().isLength({ min: 3 }).withMessage('Invalid pickup address'),
+    body('destination').isString().isLength({ min: 3 }).withMessage('Invalid destination address'),
+    body('vehicleType').isString().isIn(['auto', 'car', 'motorcycle']).withMessage('Invalid vehicle type'),
+    body('plateNumber').isString().isLength({ min: 5 }).withMessage('Invalid plate number'),
+    rideController.createOnSightRide
+);
 
 router.get('/get-fare',
     authMiddleware.authUser,
