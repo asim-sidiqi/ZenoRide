@@ -12,7 +12,16 @@ dotenv.config();
 const connectToDb = require('./db/db')
 connectToDb();
 
-app.use(cors());
+const allowedOrigins = [
+  'https://zeno-frontend.vercel.app',  // Replace this with your real frontend deployed link
+  'http://localhost:5173'              // Keep for local testing
+];
+
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true
+}));
+
 app.use(express.json());
 app.use(express.urlencoded( {extended:true} ) )
 app.use(cookieParser());
