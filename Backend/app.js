@@ -13,7 +13,7 @@ const connectToDb = require('./db/db')
 connectToDb();
 
 const allowedOrigins = [
-  'https://zeno-ride.vercel.app',  // Replace this with your real frontend deployed link
+  'https://zeno-ride-vite.vercel.app',  // Replace this with your real frontend deployed link
   'http://localhost:5173'              // Keep for local testing
 ];
 
